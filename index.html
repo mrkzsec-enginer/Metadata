@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MRKZ.ID — Unified Intelligence Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;600;700;800&family=JetBrains+Mono:wght@300;400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --c:#00ffcc;--b:#00aaff;--p:#ff44aa;--y:#ffcc00;--o:#ff6600;
+  --bg:#06060f;--s1:rgba(0,255,204,0.05);--s2:rgba(0,255,204,0.12);
+  --border:rgba(0,255,204,0.14);--mono:'JetBrains Mono',monospace;
+  --head:'Oxanium',sans-serif;--syne:'Syne',sans-serif;
+  --sidebar-w:240px;
+  --topbar-h:60px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);font-family:var(--mono);color:var(--c);
+  min-height:100vh;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 90% 5%,rgba(0,170,255,0.06),transparent),
+    radial-gradient(ellipse 60% 40% at 10% 90%,rgba(255,68,170,0.04),transparent),
+    radial-gradient(ellipse 50% 30% at 50% 50%,rgba(0,255,204,0.03),transparent),
+    repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(0,255,204,0.025) 39px,rgba(0,255,204,0.025) 40px),
+    repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(0,255,204,0.025) 39px,rgba(0,255,204,0.025) 40px);
+}
+
+/* ══ TOPBAR ══════════════════════════════════════════════════════════════════ */
+.topbar{
+  position:fixed;top:0;left:0;right:0;height:var(--topbar-h);z-index:200;
+  background:rgba(6,6,15,0.92);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:16px;padding:0 20px;
+}
+.hamburger{
+  width:42px;height:42px;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;gap:6px;
+  cursor:pointer;border:1px solid var(--border);border-radius:10px;
+  background:transparent;transition:all .25s;flex-shrink:0;
+}
+.hamburger:hover{background:var(--s2);border-color:rgba(0,255,204,0.4);}
+.hamburger.active{background:var(--s2);border-color:var(--c);}
+.hb-line{
+  width:18px;height:1.5px;background:var(--c);border-radius:1px;
+  transition:all .3s cubic-bezier(.68,-.55,.265,1.55);transform-origin:center;
+}
+.hamburger.active .hb-line:nth-child(1){transform:translateY(7.5px) rotate(45deg);}
+.hamburger.active .hb-line:nth-child(2){opacity:0;transform:scaleX(0);}
+.hamburger.active .hb-line:nth-child(3){transform:translateY(-7.5px) rotate(-45deg);}
+
+.topbar-logo{
+  font-family:var(--head);font-size:1.25rem;font-weight:800;letter-spacing:2px;
+  background:linear-gradient(90deg,var(--c),var(--b),var(--p));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.topbar-badge{
+  font-size:.65rem;letter-spacing:2px;opacity:.4;text-transform:uppercase;
+  border:1px solid var(--border);padding:3px 10px;border-radius:20px;
+}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.topbar-mode{
+  font-size:.72rem;padding:5px 14px;border-radius:20px;border:1px solid var(--border);
+  color:rgba(0,255,204,0.6);background:transparent;cursor:pointer;
+  font-family:var(--mono);transition:all .2s;
+}
+.topbar-mode.active{border-color:var(--c);color:var(--c);background:var(--s1);}
+.topbar-mode:hover{border-color:rgba(0,255,204,0.4);color:var(--c);}
+
+/* ══ SIDEBAR ═════════════════════════════════════════════════════════════════ */
+.sidebar{
+  position:fixed;top:var(--topbar-h);left:0;bottom:0;
+  width:var(--sidebar-w);z-index:150;
+  background:rgba(6,6,15,0.97);backdrop-filter:blur(30px);
+  border-right:1px solid var(--border);
+  overflow-y:auto;padding:16px 0 40px;
+  transform:translateX(-100%);transition:transform .35s cubic-bezier(.68,-.55,.265,1.55);
+}
+.sidebar.open{transform:translateX(0);}
+.sidebar-overlay{
+  position:fixed;inset:0;top:var(--topbar-h);background:rgba(0,0,0,0.6);
+  z-index:140;opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.sidebar-overlay.open{opacity:1;pointer-events:all;}
+
+.nav-section{
+  padding:0 16px;font-size:.6rem;letter-spacing:3px;
+  opacity:.35;text-transform:uppercase;margin:22px 0 8px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:10px 18px;
+  cursor:pointer;font-size:.8rem;font-weight:500;
+  color:rgba(0,255,204,0.55);transition:all .2s;
+  border-left:2px solid transparent;user-select:none;position:relative;
+}
+.nav-item:hover{color:var(--c);background:var(--s1);border-left-color:rgba(0,255,204,0.3);}
+.nav-item.active{color:var(--c);background:var(--s2);border-left-color:var(--c);}
+.nav-item.active::after{
+  content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);
+  width:3px;height:60%;background:var(--c);border-radius:2px 0 0 2px;
+  box-shadow:0 0 8px var(--c);
+}
+.nav-icon{font-size:.95rem;width:20px;text-align:center;flex-shrink:0;}
+.nav-group-label{
+  font-size:.65rem;padding:3px 10px;border-radius:20px;margin-left:auto;
+  background:rgba(0,255,204,0.08);color:rgba(0,255,204,0.4);
+  border:1px solid rgba(0,255,204,0.15);
+}
+
+/* ══ MAIN CONTENT ════════════════════════════════════════════════════════════ */
+.main-wrap{
+  margin-top:var(--topbar-h);position:relative;z-index:1;
+  padding:28px 32px;transition:margin-left .35s cubic-bezier(.68,-.55,.265,1.55);
+}
+.main-wrap.sidebar-open{margin-left:var(--sidebar-w);}
+
+/* ══ MODULE WRAPPER ══════════════════════════════════════════════════════════ */
+.module{display:none;}
+.module.active{display:block;animation:fadeUp .35s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══ PAGE HEADER ══════════════════════════════════════════════════════════════ */
+.page-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:28px;flex-wrap:wrap;gap:12px;
+}
+.page-title{
+  font-family:var(--head);font-size:1.6rem;font-weight:700;letter-spacing:1px;
+}
+.page-sub{font-size:.78rem;opacity:.45;margin-top:5px;line-height:1.6;max-width:560px;}
+.page-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.ptag{
+  font-size:.65rem;padding:3px 10px;border-radius:20px;letter-spacing:1px;
+  border:1px solid var(--border);opacity:.6;
+}
+
+/* ══ CARDS ═══════════════════════════════════════════════════════════════════ */
+.card{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:16px;padding:22px;margin-bottom:18px;
+  backdrop-filter:blur(12px);
+}
+.card-label{font-size:.68rem;letter-spacing:2px;opacity:.45;text-transform:uppercase;margin-bottom:12px;}
+.card-title{
+  font-family:var(--syne);font-size:1rem;font-weight:700;
+  color:var(--c);margin-bottom:18px;display:flex;align-items:center;gap:8px;
+}
+
+/* ══ INPUTS ══════════════════════════════════════════════════════════════════ */
+.input-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+input[type=text],input[type=email],input[type=number],input[type=datetime-local],textarea,select{
+  background:rgba(0,0,0,0.5);border:1px solid var(--border);
+  color:var(--c);font-family:var(--mono);font-size:.84rem;
+  padding:10px 14px;border-radius:10px;outline:none;
+  transition:border-color .2s;width:100%;
+}
+input[type=text]:focus,textarea:focus,select:focus,input[type=number]:focus{
+  border-color:var(--c);box-shadow:0 0 0 2px rgba(0,255,204,0.08);
+}
+textarea{resize:vertical;min-height:100px;}
+select option{background:#0d0d1a;}
+
+/* ══ BUTTONS ═════════════════════════════════════════════════════════════════ */
+.btn{
+  background:transparent;border:1px solid var(--c);color:var(--c);
+  padding:10px 20px;border-radius:20px;cursor:pointer;
+  font-family:var(--mono);font-size:.82rem;font-weight:600;
+  transition:all .2s;display:inline-flex;align-items:center;gap:7px;
+  white-space:nowrap;
+}
+.btn:hover{background:rgba(0,255,204,0.1);box-shadow:0 0 20px rgba(0,255,204,0.2);}
+.btn:active{transform:scale(.97);}
+.btn-b{border-color:var(--b);color:var(--b);}
+.btn-b:hover{background:rgba(0,170,255,0.1);}
+.btn-p{border-color:var(--p);color:var(--p);}
+.btn-p:hover{background:rgba(255,68,170,0.1);}
+.btn-y{border-color:var(--y);color:var(--y);}
+.btn-r{border-color:#ff4444;color:#ff4444;}
+.btn-r:hover{background:rgba(255,68,68,0.1);}
+.btn-g{border-color:#44ff88;color:#44ff88;}
+.btn-g:hover{background:rgba(68,255,136,0.1);}
+.btn-sm{padding:6px 14px;font-size:.75rem;}
+.btn-full{width:100%;justify-content:center;}
+
+/* ══ RESULTS ═════════════════════════════════════════════════════════════════ */
+.result-box{
+  background:rgba(0,0,0,0.55);border:1px solid var(--border);
+  border-radius:10px;padding:16px;font-size:.8rem;line-height:1.8;
+  margin-top:14px;min-height:60px;
+}
+.result-box.empty{opacity:.4;font-style:italic;}
+.result-row{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);gap:12px;
+}
+.result-row:last-child{border-bottom:none;}
+.result-key{color:rgba(0,255,204,0.5);font-size:.74rem;min-width:140px;flex-shrink:0;}
+.result-val{color:var(--c);word-break:break-all;text-align:right;}
+
+/* ══ LAYOUT HELPERS ══════════════════════════════════════════════════════════ */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.cols-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+@media(max-width:700px){.cols,.cols-3{grid-template-columns:1fr;}}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+/* ══ BADGE ════════════════════════════════════════════════════════════════════ */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;
+}
+.badge-ok{background:rgba(68,255,136,0.15);border:1px solid rgba(68,255,136,0.4);color:#44ff88;}
+.badge-warn{background:rgba(255,204,0,0.15);border:1px solid rgba(255,204,0,0.4);color:#ffcc00;}
+.badge-err{background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.4);color:#ff6666;}
+.badge-info{background:rgba(0,170,255,0.15);border:1px solid rgba(0,170,255,0.4);color:#00aaff;}
+
+/* ══ PROGRESS ════════════════════════════════════════════════════════════════ */
+.progress-wrap{height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin:10px 0;overflow:hidden;}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--c),var(--b));border-radius:2px;width:0%;transition:width .4s;}
+
+/* ══ INNER TABS ══════════════════════════════════════════════════════════════ */
+.inner-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+.inner-tab{
+  padding:7px 16px;border-radius:20px;cursor:pointer;font-size:.78rem;
+  border:1px solid var(--border);color:rgba(0,255,204,0.5);
+  transition:all .2s;background:transparent;font-family:var(--mono);
+}
+.inner-tab.active{border-color:var(--c);color:var(--c);background:var(--s2);}
+
+/* ══ HASH ROW ════════════════════════════════════════════════════════════════ */
+.hash-row{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;
+  border-radius:8px;background:rgba(0,0,0,0.4);margin:6px 0;
+}
+.hash-algo{color:var(--b);font-size:.7rem;min-width:70px;}
+.hash-val{flex:1;word-break:break-all;font-size:.75rem;}
+.copy-btn{
+  background:transparent;border:1px solid rgba(0,255,204,0.3);
+  color:var(--c);padding:3px 8px;border-radius:6px;cursor:pointer;
+  font-size:.7rem;font-family:var(--mono);transition:all .15s;flex-shrink:0;
+}
+.copy-btn:hover{background:rgba(0,255,204,0.1);}
+
+/* ══ USERNAME GRID ════════════════════════════════════════════════════════════ */
+.uname-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:14px;}
+.uname-item{
+  display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;
+  border:1px solid rgba(255,255,255,0.06);font-size:.78rem;background:rgba(0,0,0,0.4);
+  transition:all .2s;text-decoration:none;color:inherit;
+}
+.uname-item:hover{border-color:var(--c);background:var(--s2);}
+.uname-item .plat{opacity:.6;font-size:.7rem;}
+.uname-item .status{margin-left:auto;font-size:.85rem;}
+.uname-item.checking{opacity:.5;animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:.3}}
+
+/* ══ EXIF SPECIFIC ═══════════════════════════════════════════════════════════ */
+.chart-wrap{position:relative;height:220px;width:100%;}
+.chart-wrap canvas{max-height:220px !important;}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;}
+.metric-item{
+  text-align:center;padding:16px 10px;
+  background:rgba(0,255,204,0.06);border-radius:12px;
+  border:1px solid rgba(0,255,204,0.15);
+}
+.metric-value{font-family:var(--syne);font-size:1.8rem;font-weight:800;color:var(--c);}
+.metric-label{font-size:.75rem;opacity:.7;margin-top:4px;}
+#map{height:360px;border-radius:12px;}
+.map-empty{
+  height:360px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:rgba(255,0,0,0.05);border:1px solid rgba(255,68,68,0.25);
+  border-radius:12px;text-align:center;color:rgba(255,100,100,0.7);
+}
+.batch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:16px;}
+.batch-card{
+  background:rgba(0,0,0,0.4);border-radius:14px;border:1px solid var(--border);
+  overflow:hidden;transition:all .25s;
+}
+.batch-card:hover{border-color:var(--c);box-shadow:0 0 30px rgba(0,255,204,0.12);}
+.batch-thumb{width:100%;height:150px;object-fit:cover;display:block;background:#111;}
+.batch-thumb-ph{
+  width:100%;height:150px;background:linear-gradient(135deg,#111,#1a1a2e);
+  display:flex;align-items:center;justify-content:center;font-size:3rem;
+}
+.batch-info{padding:14px;}
+.batch-filename{
+  font-family:var(--syne);font-weight:700;font-size:.88rem;margin-bottom:10px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.batch-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.tag{font-size:.72rem;padding:3px 10px;border-radius:20px;font-weight:500;}
+.tag-gps{background:rgba(0,255,204,0.15);border:1px solid rgba(0,255,204,0.4);color:var(--c);}
+.tag-nogps{background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.4);color:#ff8888;}
+.tag-risk-low{background:rgba(68,255,68,0.12);border:1px solid rgba(68,255,68,0.4);color:#44ff88;}
+.tag-risk-med{background:rgba(255,170,0,0.12);border:1px solid rgba(255,170,0,0.4);color:#ffaa00;}
+.tag-risk-high{background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.4);color:#ff6666;}
+.batch-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.78rem;margin-bottom:12px;}
+.batch-meta-item{padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:8px;}
+.batch-meta-key{opacity:.55;font-size:.7rem;margin-bottom:2px;}
+.batch-meta-val{color:var(--c);font-weight:500;}
+.batch-gps-box{
+  background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);
+  border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:.78rem;
+}
+.batch-gps-coord{font-weight:700;color:var(--b);margin-bottom:4px;}
+.risk-bar{height:5px;background:rgba(255,255,255,0.08);border-radius:3px;margin-top:4px;overflow:hidden;}
+.risk-bar-fill{height:100%;border-radius:3px;transition:width 1s;}
+.single-preview{display:grid;grid-template-columns:1fr 360px;gap:20px;}
+@media(max-width:900px){.single-preview{grid-template-columns:1fr;}}
+.single-img{width:100%;border-radius:12px;max-height:440px;object-fit:cover;}
+.single-meta{overflow-y:auto;max-height:440px;}
+.exif-table{width:100%;border-collapse:collapse;font-size:.78rem;}
+.exif-table tr:nth-child(even) td{background:rgba(255,255,255,0.02);}
+.exif-table td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.04);}
+.exif-table td:first-child{color:rgba(0,255,204,0.55);width:40%;font-size:.73rem;}
+.ribbon{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:20px;font-size:.72rem;font-weight:600;
+}
+.ribbon-safe{background:rgba(68,255,136,0.15);border:1px solid rgba(68,255,136,0.4);color:#44ff88;}
+.ribbon-warn{background:rgba(255,170,0,0.15);border:1px solid rgba(255,170,0,0.4);color:#ffaa00;}
+.ribbon-danger{background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.4);color:#ff6666;}
+.batch-toolbar{
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+  padding:14px;background:rgba(0,0,0,0.3);border-radius:12px;margin-bottom:16px;
+}
+.section-label{font-size:.7rem;letter-spacing:2px;opacity:.45;text-transform:uppercase;margin-bottom:10px;}
+.hist-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 16px;margin:8px 0;background:rgba(0,0,0,0.3);
+  border-radius:10px;border-left:3px solid var(--c);
+}
+.upload-zone{
+  border:2px dashed var(--border);border-radius:18px;padding:44px;
+  text-align:center;cursor:pointer;
+  background:rgba(0,255,204,0.02);backdrop-filter:blur(20px);
+  transition:all .35s;
+}
+.upload-zone:hover,.upload-zone.dragover{
+  border-color:var(--p);box-shadow:0 0 60px rgba(255,68,170,0.2);
+  transform:scale(1.005);
+}
+.upload-icon{font-size:3rem;margin-bottom:14px;}
+.upload-title{font-family:var(--syne);font-size:1.3rem;font-weight:700;margin-bottom:8px;}
+
+/* ══ MODAL ════════════════════════════════════════════════════════════════════ */
+.modal{
+  position:fixed;inset:0;background:rgba(0,0,0,0.88);
+  display:flex;align-items:center;justify-content:center;z-index:3000;
+}
+.modal-box{
+  background:#0d0d1a;border-radius:20px;padding:36px;
+  max-width:600px;width:90%;max-height:80vh;overflow-y:auto;
+  border:1px solid var(--c);box-shadow:0 0 60px rgba(0,255,204,0.15);
+}
+
+/* ══ TOAST ════════════════════════════════════════════════════════════════════ */
+.toast{
+  position:fixed;bottom:24px;right:24px;
+  padding:12px 22px;border-radius:16px;font-size:.82rem;font-weight:600;
+  transform:translateX(400px);transition:all .35s cubic-bezier(.68,-.55,.265,1.55);
+  z-index:9999;backdrop-filter:blur(20px);max-width:320px;
+}
+.toast.show{transform:translateX(0);}
+.toast.ok,.toast.success{background:rgba(68,255,136,0.95);color:#000;}
+.toast.err,.toast.error{background:rgba(255,68,68,0.95);color:#fff;}
+.toast.info{background:rgba(0,170,255,0.95);color:#000;}
+
+/* ══ SCROLLBAR ════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(0,255,204,0.25);border-radius:2px;}
+
+/* ══ MOBILE ══════════════════════════════════════════════════════════════════ */
+@media(max-width:768px){
+  .main-wrap{padding:20px 14px;}
+  .main-wrap.sidebar-open{margin-left:0;}
+  .topbar-badge{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══════════════════════════════════════════════════════════════════ -->
+<div class="topbar">
+  <div class="hamburger" id="hbBtn" onclick="toggleSidebar()">
+    <div class="hb-line"></div>
+    <div class="hb-line"></div>
+    <div class="hb-line"></div>
+  </div>
+  <div class="topbar-logo">MRKZ.ID</div>
+  <div class="topbar-badge">Intelligence Suite v2.0</div>
+  <div class="topbar-right">
+    <button class="topbar-mode active" id="modeOsint" onclick="switchMode('osint',this)">OSINT Tools</button>
+    <button class="topbar-mode" id="modeExif" onclick="switchMode('exif',this)">EXIF / Metadata</button>
+  </div>
+</div>
+
+<!-- ══ SIDEBAR OVERLAY ════════════════════════════════════════════════════════ -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- ══ SIDEBAR — OSINT ════════════════════════════════════════════════════════ -->
+<nav class="sidebar" id="sidebarOsint">
+  <div class="nav-section">Investigation</div>
+  <div class="nav-item active" onclick="showPanel('username',this)">
+    <span class="nav-icon">👤</span> Username Search
+  </div>
+  <div class="nav-item" onclick="showPanel('email',this)">
+    <span class="nav-icon">📧</span> Email Analyzer
+  </div>
+  <div class="nav-item" onclick="showPanel('ip',this)">
+    <span class="nav-icon">🌐</span> IP Lookup
+  </div>
+  <div class="nav-item" onclick="showPanel('dns',this)">
+    <span class="nav-icon">🔍</span> DNS Lookup
+  </div>
+  <div class="nav-section">Crypto Tools</div>
+  <div class="nav-item" onclick="showPanel('hash',this)">
+    <span class="nav-icon">🔐</span> Hash Generator
+  </div>
+  <div class="nav-item" onclick="showPanel('encode',this)">
+    <span class="nav-icon">🔤</span> Encode / Decode
+  </div>
+  <div class="nav-item" onclick="showPanel('passgen',this)">
+    <span class="nav-icon">🔑</span> Password Gen
+  </div>
+  <div class="nav-section">Web Tools</div>
+  <div class="nav-item" onclick="showPanel('urlinfo',this)">
+    <span class="nav-icon">🔗</span> URL Analyzer
+  </div>
+  <div class="nav-item" onclick="showPanel('headers',this)">
+    <span class="nav-icon">📨</span> Email Headers
+  </div>
+  <div class="nav-item" onclick="showPanel('useragent',this)">
+    <span class="nav-icon">🖥️</span> User-Agent Parser
+  </div>
+  <div class="nav-section">Converter</div>
+  <div class="nav-item" onclick="showPanel('color',this)">
+    <span class="nav-icon">🎨</span> Color Converter
+  </div>
+  <div class="nav-item" onclick="showPanel('number',this)">
+    <span class="nav-icon">🔢</span> Number Base
+  </div>
+  <div class="nav-item" onclick="showPanel('timestamp',this)">
+    <span class="nav-icon">⏱️</span> Timestamp
+  </div>
+</nav>
+
+<!-- ══ SIDEBAR — EXIF ═════════════════════════════════════════════════════════ -->
+<nav class="sidebar" id="sidebarExif" style="display:none;">
+  <div class="nav-section">Analysis</div>
+  <div class="nav-item active" onclick="showExifTab('dashboard',this)">
+    <span class="nav-icon">📊</span> Dashboard
+  </div>
+  <div class="nav-item" onclick="showExifTab('single',this)">
+    <span class="nav-icon">🔍</span> Single View
+  </div>
+  <div class="nav-item" onclick="showExifTab('batch',this)">
+    <span class="nav-icon">📚</span> Batch
+    <span class="nav-group-label" id="navBatchCount">0</span>
+  </div>
+  <div class="nav-section">Security</div>
+  <div class="nav-item" onclick="showExifTab('privacy',this)">
+    <span class="nav-icon">🛡️</span> Privacy Scanner
+  </div>
+  <div class="nav-section">Records</div>
+  <div class="nav-item" onclick="showExifTab('history',this)">
+    <span class="nav-icon">📈</span> Riwayat
+  </div>
+</nav>
+
+<!-- ══ MAIN WRAP ══════════════════════════════════════════════════════════════ -->
+<div class="main-wrap" id="mainWrap">
+
+  <!-- ═══ MODE: OSINT ════════════════════════════════════════════════════════ -->
+  <div id="modeOsintContent">
+
+    <!-- USERNAME -->
+    <div class="module active" id="p-username">
+      <div class="page-header">
+        <div>
+          <div class="page-title">👤 Username Search</div>
+          <div class="page-sub">Cek keberadaan username di 26 platform publik. Hasil berupa link langsung — klik untuk verifikasi manual.</div>
+          <div class="page-tags"><span class="ptag">PUBLIC DATA</span><span class="ptag">NO SCRAPING</span><span class="ptag">ETHICAL USE</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="uname-inp" placeholder="masukkan username..." style="flex:1;"/>
+          <button class="btn" onclick="searchUsername()">🔍 Cari</button>
+          <button class="btn btn-b btn-sm" onclick="clearUname()">Reset</button>
+        </div>
+        <div class="progress-wrap"><div class="progress-bar" id="uname-prog"></div></div>
+        <div id="uname-results" class="uname-grid"></div>
+      </div>
+      <div class="card" style="font-size:.78rem;opacity:.55;line-height:1.8;">
+        ⚠️ Tools ini hanya membuat link ke profil publik platform. Tidak ada scraping atau login. Klik link untuk verifikasi manual.
+      </div>
+    </div>
+
+    <!-- EMAIL -->
+    <div class="module" id="p-email">
+      <div class="page-header"><div>
+        <div class="page-title">📧 Email Analyzer</div>
+        <div class="page-sub">Analisis struktur email, validasi format, cek domain MX, deteksi disposable, dan breakdown komponen.</div>
+      </div></div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="email-inp" placeholder="contoh@domain.com" style="flex:1;"/>
+          <button class="btn" onclick="analyzeEmail()">Analisis</button>
+        </div>
+        <div id="email-result" class="result-box empty">Masukkan alamat email untuk dianalisis...</div>
+      </div>
+    </div>
+
+    <!-- IP -->
+    <div class="module" id="p-ip">
+      <div class="page-header"><div>
+        <div class="page-title">🌐 IP Info Lookup</div>
+        <div class="page-sub">Informasi publik IP address: lokasi, ISP, ASN, timezone, koordinat. Menggunakan API publik ipapi.co.</div>
+      </div></div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="ip-inp" placeholder="8.8.8.8 atau kosongkan untuk IP saya" style="flex:1;"/>
+          <button class="btn" onclick="lookupIP()">Lookup</button>
+          <button class="btn btn-b btn-sm" onclick="myIP()">IP Saya</button>
+        </div>
+        <div id="ip-result" class="result-box empty">Masukkan IP atau klik "IP Saya"...</div>
+      </div>
+    </div>
+
+    <!-- DNS -->
+    <div class="module" id="p-dns">
+      <div class="page-header"><div>
+        <div class="page-title">🔍 DNS Lookup</div>
+        <div class="page-sub">Query DNS record publik: A, AAAA, MX, TXT, NS, CNAME. Menggunakan Google DNS over HTTPS.</div>
+      </div></div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="dns-inp" placeholder="contoh.com" style="flex:1;"/>
+          <select id="dns-type" style="width:120px;">
+            <option>A</option><option>AAAA</option><option>MX</option>
+            <option>TXT</option><option>NS</option><option>CNAME</option><option>SOA</option>
+          </select>
+          <button class="btn" onclick="dnsLookup()">Query</button>
+        </div>
+        <div id="dns-result" class="result-box empty">Masukkan domain dan pilih tipe record...</div>
+      </div>
+    </div>
+
+    <!-- HASH -->
+    <div class="module" id="p-hash">
+      <div class="page-header"><div>
+        <div class="page-title">🔐 Hash Generator</div>
+        <div class="page-sub">Generate MD5, SHA-1, SHA-256, SHA-384, SHA-512 dari teks. 100% lokal — Web Crypto API.</div>
+      </div></div>
+      <div class="card">
+        <textarea id="hash-inp" placeholder="Masukkan teks untuk di-hash..."></textarea>
+        <button class="btn btn-full" style="margin-top:12px;" onclick="generateHashes()">⚡ Generate Semua Hash</button>
+        <div id="hash-results"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Hash Checker</div>
+        <div class="cols">
+          <input type="text" id="hash-check-inp" placeholder="Teks asli..."/>
+          <input type="text" id="hash-check-hash" placeholder="Hash untuk dibandingkan..."/>
+        </div>
+        <button class="btn" style="margin-top:10px;" onclick="checkHash()">🔎 Bandingkan</button>
+        <div id="hash-check-result" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- ENCODE -->
+    <div class="module" id="p-encode">
+      <div class="page-header"><div>
+        <div class="page-title">🔤 Encode / Decode</div>
+        <div class="page-sub">Konversi teks ke/dari Base64, URL, HTML Entities, Hex, Binary, ROT13, Morse.</div>
+      </div></div>
+      <div class="card">
+        <div class="inner-tabs">
+          <button class="inner-tab active" onclick="setEncMode('base64',this)">Base64</button>
+          <button class="inner-tab" onclick="setEncMode('url',this)">URL</button>
+          <button class="inner-tab" onclick="setEncMode('html',this)">HTML</button>
+          <button class="inner-tab" onclick="setEncMode('hex',this)">Hex</button>
+          <button class="inner-tab" onclick="setEncMode('binary',this)">Binary</button>
+          <button class="inner-tab" onclick="setEncMode('rot13',this)">ROT13</button>
+          <button class="inner-tab" onclick="setEncMode('morse',this)">Morse</button>
+        </div>
+        <div class="cols">
+          <div>
+            <div class="card-label">Input</div>
+            <textarea id="enc-inp" placeholder="Teks input..." oninput="liveEncode()"></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn btn-sm" onclick="doEncode()">→ Encode</button>
+              <button class="btn btn-b btn-sm" onclick="doDecode()">← Decode</button>
+            </div>
+          </div>
+          <div>
+            <div class="card-label">Output</div>
+            <textarea id="enc-out" placeholder="Hasil..." readonly></textarea>
+            <button class="btn btn-sm" style="margin-top:8px;" onclick="copyEnc()">📋 Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASSGEN -->
+    <div class="module" id="p-passgen">
+      <div class="page-header"><div>
+        <div class="page-title">🔑 Password Generator</div>
+        <div class="page-sub">Generate password acak yang kuat. 100% lokal — tidak ada data yang dikirim ke server.</div>
+      </div></div>
+      <div class="card">
+        <div class="cols">
+          <div>
+            <div class="card-label">Panjang: <span id="pass-len-val">16</span></div>
+            <input type="range" id="pass-len" min="6" max="64" value="16" oninput="document.getElementById('pass-len-val').textContent=this.value;generatePass();" style="width:100%;accent-color:var(--c);margin:10px 0;"/>
+            <label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.82rem;cursor:pointer;"><input type="checkbox" id="pass-upper" checked style="accent-color:var(--c);"> Huruf Besar (A-Z)</label>
+            <label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.82rem;cursor:pointer;"><input type="checkbox" id="pass-lower" checked style="accent-color:var(--c);"> Huruf Kecil (a-z)</label>
+            <label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.82rem;cursor:pointer;"><input type="checkbox" id="pass-num" checked style="accent-color:var(--c);"> Angka (0-9)</label>
+            <label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.82rem;cursor:pointer;"><input type="checkbox" id="pass-sym" style="accent-color:var(--c);"> Simbol (!@#$...)</label>
+            <label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.82rem;cursor:pointer;"><input type="checkbox" id="pass-noamb" style="accent-color:var(--c);"> Hindari Ambigu (0,O,l,1)</label>
+          </div>
+          <div>
+            <div class="card-label">Jumlah Password</div>
+            <input type="number" id="pass-count" value="5" min="1" max="20" style="margin-bottom:12px;"/>
+            <button class="btn btn-full" onclick="generatePass()" style="margin-bottom:12px;">⚡ Generate</button>
+            <div id="pass-strength" style="margin-bottom:12px;"></div>
+            <div id="pass-results"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- URL -->
+    <div class="module" id="p-urlinfo">
+      <div class="page-header"><div>
+        <div class="page-title">🔗 URL Analyzer</div>
+        <div class="page-sub">Breakdown URL: protokol, domain, path, query params, fragment. Deteksi karakter mencurigakan.</div>
+      </div></div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="url-inp" placeholder="https://contoh.com/path?key=value#section" style="flex:1;"/>
+          <button class="btn" onclick="analyzeURL()">Analisis</button>
+        </div>
+        <div id="url-result" class="result-box empty">Masukkan URL untuk dianalisis...</div>
+      </div>
+    </div>
+
+    <!-- HEADERS -->
+    <div class="module" id="p-headers">
+      <div class="page-header"><div>
+        <div class="page-title">📨 Email Header Analyzer</div>
+        <div class="page-sub">Paste raw email header: routing server, deteksi spoofing, SPF/DKIM hints, timeline pengiriman.</div>
+      </div></div>
+      <div class="card">
+        <textarea id="header-inp" placeholder="Paste raw email header di sini...&#10;&#10;Received: from mail.example.com...&#10;From: sender@example.com" style="min-height:160px;"></textarea>
+        <button class="btn" style="margin-top:10px;" onclick="analyzeHeaders()">🔍 Analisis Header</button>
+        <div id="header-result" class="result-box empty" style="margin-top:14px;">Paste email header di atas...</div>
+      </div>
+    </div>
+
+    <!-- USERAGENT -->
+    <div class="module" id="p-useragent">
+      <div class="page-header"><div>
+        <div class="page-title">🖥️ User-Agent Parser</div>
+        <div class="page-sub">Parse User-Agent string: browser, versi, OS, device type, render engine.</div>
+      </div></div>
+      <div class="card">
+        <div class="input-row">
+          <input type="text" id="ua-inp" placeholder="Mozilla/5.0 (Windows NT 10.0; Win64; x64)..." style="flex:1;"/>
+          <button class="btn" onclick="parseUA()">Parse</button>
+          <button class="btn btn-b btn-sm" onclick="myUA()">UA Saya</button>
+        </div>
+        <div id="ua-result" class="result-box empty">Masukkan User-Agent string...</div>
+      </div>
+    </div>
+
+    <!-- COLOR -->
+    <div class="module" id="p-color">
+      <div class="page-header"><div>
+        <div class="page-title">🎨 Color Converter</div>
+        <div class="page-sub">Konversi warna antar format: HEX, RGB, HSL. Preview warna langsung.</div>
+      </div></div>
+      <div class="card">
+        <div class="cols">
+          <div>
+            <div class="card-label">Input Warna</div>
+            <div class="input-row">
+              <input type="text" id="color-inp" placeholder="#00ffcc atau rgb(0,255,204)" style="flex:1;" oninput="convertColor()"/>
+              <input type="color" id="color-pick" value="#00ffcc" oninput="document.getElementById('color-inp').value=this.value;convertColor();" style="width:44px;height:44px;padding:2px;border-radius:8px;border:1px solid var(--border);background:transparent;cursor:pointer;"/>
+            </div>
+          </div>
+          <div id="color-preview" style="height:80px;border-radius:10px;border:1px solid var(--border);background:#00ffcc;transition:background .3s;display:flex;align-items:center;justify-content:center;font-size:.75rem;"></div>
+        </div>
+        <div id="color-result" class="result-box empty" style="margin-top:14px;">Masukkan warna...</div>
+      </div>
+    </div>
+
+    <!-- NUMBER -->
+    <div class="module" id="p-number">
+      <div class="page-header"><div>
+        <div class="page-title">🔢 Number Base Converter</div>
+        <div class="page-sub">Konversi angka antar basis: Desimal, Biner, Oktal, Heksadesimal. Real-time.</div>
+      </div></div>
+      <div class="card">
+        <div class="cols">
+          <div><div class="card-label">Desimal (Base 10)</div><input type="text" id="num-dec" placeholder="255" oninput="numConvert('dec')"/></div>
+          <div><div class="card-label">Biner (Base 2)</div><input type="text" id="num-bin" placeholder="11111111" oninput="numConvert('bin')"/></div>
+          <div><div class="card-label">Oktal (Base 8)</div><input type="text" id="num-oct" placeholder="377" oninput="numConvert('oct')"/></div>
+          <div><div class="card-label">Hex (Base 16)</div><input type="text" id="num-hex" placeholder="FF" oninput="numConvert('hex')"/></div>
+        </div>
+        <div id="num-extra" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <!-- TIMESTAMP -->
+    <div class="module" id="p-timestamp">
+      <div class="page-header"><div>
+        <div class="page-title">⏱️ Timestamp Converter</div>
+        <div class="page-sub">Konversi Unix timestamp ke tanggal/waktu dan sebaliknya. Multi-timezone.</div>
+      </div></div>
+      <div class="card">
+        <div class="cols">
+          <div>
+            <div class="card-label">Unix Timestamp (detik)</div>
+            <div class="input-row">
+              <input type="text" id="ts-unix" placeholder="1700000000" style="flex:1;"/>
+              <button class="btn btn-sm" onclick="tsNow()">Sekarang</button>
+            </div>
+            <button class="btn" style="margin-top:8px;width:100%;justify-content:center;" onclick="tsToDate()">→ Konversi ke Tanggal</button>
+          </div>
+          <div>
+            <div class="card-label">Tanggal & Waktu</div>
+            <input type="datetime-local" id="ts-date" style="margin-bottom:8px;"/>
+            <button class="btn btn-b" style="width:100%;justify-content:center;" onclick="dateToTs()">→ Konversi ke Timestamp</button>
+          </div>
+        </div>
+        <div id="ts-result" class="result-box empty" style="margin-top:14px;">Masukkan timestamp atau pilih tanggal...</div>
+      </div>
+    </div>
+
+  </div><!-- /modeOsintContent -->
+
+  <!-- ═══ MODE: EXIF ══════════════════════════════════════════════════════════ -->
+  <div id="modeExifContent" style="display:none;">
+
+    <!-- Upload zone (shared) -->
+    <div class="upload-zone" id="uploadZone" style="margin-bottom:24px;">
+      <div class="upload-icon">📁</div>
+      <div class="upload-title">Drag & Drop atau Klik — Multi File OK</div>
+      <div style="color:rgba(0,255,204,0.45);font-size:.84rem;margin-top:8px;">JPEG/JPG • Batch processing • GPS • EXIF lengkap</div>
+      <input type="file" id="fileInput" multiple accept="image/jpeg,image/jpg" hidden/>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="module active" id="exif-dashboard">
+      <div class="page-header"><div>
+        <div class="page-title">📊 Dashboard</div>
+        <div class="page-sub">Ringkasan semua berkas yang telah dianalisis.</div>
+      </div></div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="card">
+          <div class="card-title">⚡ Statistik</div>
+          <div class="metric-grid">
+            <div class="metric-item"><div class="metric-value" id="m-total">0</div><div class="metric-label">Berkas</div></div>
+            <div class="metric-item"><div class="metric-value" id="m-gps">0</div><div class="metric-label">Ada GPS</div></div>
+            <div class="metric-item"><div class="metric-value" id="m-risk">AMAN</div><div class="metric-label">Risiko</div></div>
+            <div class="metric-item"><div class="metric-value" id="m-edit">0%</div><div class="metric-label">Risk Avg</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 GPS vs Non-GPS</div>
+          <div class="chart-wrap"><canvas id="statsChart"></canvas></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">📁 File Terakhir</div>
+          <div id="recentFiles" style="color:rgba(0,255,204,0.4);font-size:.85rem;">Belum ada berkas — unggah sekarang!</div>
+        </div>
+        <div class="card">
+          <div class="card-title">🔥 Risk Overview</div>
+          <div id="riskOverview" style="color:rgba(0,255,204,0.4);font-size:.85rem;">Belum ada data risiko privasi.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SINGLE -->
+    <div class="module" id="exif-single">
+      <div class="page-header"><div>
+        <div class="page-title">🔍 Single Analysis</div>
+        <div class="page-sub">Detail lengkap satu foto: EXIF, peta GPS, histogram RGB.</div>
+      </div></div>
+      <div class="card" style="margin-bottom:20px;">
+        <div id="singleEmpty" style="color:rgba(0,255,204,0.4);text-align:center;padding:40px;">
+          Klik "👁️ Detail" dari tab Batch untuk melihat analisis lengkap
+        </div>
+        <div id="singleContent" style="display:none;">
+          <div class="single-preview">
+            <img id="imgPreview" class="single-img"/>
+            <div class="single-meta" id="singleMetadata"></div>
+          </div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">🗺️ Peta GPS</div>
+          <div id="mapEmpty" class="map-empty">
+            <div style="font-size:2.5rem;margin-bottom:12px;">📍</div>
+            <div>Tidak ada GPS</div>
+            <div style="font-size:.8rem;margin-top:6px;opacity:.7;">Foto ini tidak mengandung data koordinat</div>
+          </div>
+          <div id="map" style="display:none;"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🎨 Histogram RGB</div>
+          <div class="chart-wrap"><canvas id="histChart"></canvas></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title">🔬 Raw EXIF Data</div>
+        <div id="rawExif" style="color:rgba(0,255,204,0.5);font-size:.8rem;">Pilih foto untuk melihat EXIF lengkap</div>
+      </div>
+    </div>
+
+    <!-- BATCH -->
+    <div class="module" id="exif-batch">
+      <div class="page-header"><div>
+        <div class="page-title">📚 Batch Analysis</div>
+        <div class="page-sub">Analisis massal foto: metadata, GPS, privacy risk, export CSV/JSON/HTML.</div>
+      </div></div>
+      <div class="card">
+        <div class="batch-toolbar">
+          <button class="btn" onclick="processBatch()">🚀 Analisis Semua</button>
+          <button class="btn btn-r" onclick="clearBatch()">🗑️ Hapus Semua</button>
+          <div style="flex:1;"></div>
+          <button class="btn btn-g" onclick="exportCSV()">📊 CSV</button>
+          <button class="btn btn-b" onclick="exportJSON()">💾 JSON</button>
+          <button class="btn" onclick="exportHTML()">📄 HTML</button>
+        </div>
+        <div class="batch-grid" id="batchGrid">
+          <div style="color:rgba(0,255,204,0.4);padding:40px;text-align:center;grid-column:1/-1;">Belum ada berkas. Unggah foto di atas!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRIVACY -->
+    <div class="module" id="exif-privacy">
+      <div class="page-header"><div>
+        <div class="page-title">🛡️ Privacy Scanner</div>
+        <div class="page-sub">Analisis risiko privasi dari metadata foto yang diunggah.</div>
+      </div></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">🛡️ Risk per Berkas</div>
+          <div id="privacySummary" style="color:rgba(0,255,204,0.5);font-size:.85rem;">Unggah berkas terlebih dahulu.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚡ Aksi Cepat</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn btn-r" onclick="stripAllExif()" style="width:100%;justify-content:center;">🗑️ Hapus Semua EXIF</button>
+            <button class="btn btn-g" onclick="generatePrivacyReport()" style="width:100%;justify-content:center;">📄 Export Laporan JSON</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="module" id="exif-history">
+      <div class="page-header"><div>
+        <div class="page-title">📈 Riwayat</div>
+        <div class="page-sub">Riwayat analisis sesi ini (disimpan di localStorage).</div>
+      </div></div>
+      <div class="card">
+        <div id="historyList" style="color:rgba(0,255,204,0.4);font-size:.85rem;">Belum ada riwayat.</div>
+      </div>
+    </div>
+
+  </div><!-- /modeExifContent -->
+</div><!-- /main-wrap -->
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODAL GEOCODE -->
+<div id="geocodeModal" class="modal" style="display:none;">
+  <div class="modal-box">
+    <div style="font-family:var(--syne);font-size:1.2rem;font-weight:700;margin-bottom:20px;">🌍 Reverse Geocode</div>
+    <div id="geocodeResult"></div>
+    <button class="btn" onclick="document.getElementById('geocodeModal').style.display='none'" style="margin-top:20px;">Tutup</button>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════════
+   TOPBAR / SIDEBAR / MODE SWITCHER
+══════════════════════════════════════════════════════════════════════════════ */
+let sidebarOpen = false;
+let currentMode = 'osint';
+
+function toggleSidebar(){
+  sidebarOpen = !sidebarOpen;
+  const btn = document.getElementById('hbBtn');
+  const overlay = document.getElementById('sidebarOverlay');
+  const wrap = document.getElementById('mainWrap');
+  btn.classList.toggle('active', sidebarOpen);
+  overlay.classList.toggle('open', sidebarOpen);
+  wrap.classList.toggle('sidebar-open', sidebarOpen);
+  const sb = currentMode === 'osint' ? document.getElementById('sidebarOsint') : document.getElementById('sidebarExif');
+  sb.classList.toggle('open', sidebarOpen);
+}
+
+function closeSidebar(){
+  sidebarOpen = false;
+  document.getElementById('hbBtn').classList.remove('active');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+  document.getElementById('mainWrap').classList.remove('sidebar-open');
+  document.getElementById('sidebarOsint').classList.remove('open');
+  document.getElementById('sidebarExif').classList.remove('open');
+}
+
+function switchMode(mode, btn){
+  currentMode = mode;
+  document.querySelectorAll('.topbar-mode').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('modeOsintContent').style.display = mode === 'osint' ? '' : 'none';
+  document.getElementById('modeExifContent').style.display = mode === 'exif' ? '' : 'none';
+  document.getElementById('sidebarOsint').style.display = mode === 'osint' ? '' : 'none';
+  document.getElementById('sidebarExif').style.display = mode === 'exif' ? '' : 'none';
+  closeSidebar();
+  if(mode === 'exif') updateDashboard();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   OSINT PANEL NAVIGATION
+══════════════════════════════════════════════════════════════════════════════ */
+function showPanel(name, el){
+  document.querySelectorAll('#modeOsintContent .module').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#sidebarOsint .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('p-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   EXIF TAB NAVIGATION
+══════════════════════════════════════════════════════════════════════════════ */
+function showExifTab(name, el){
+  document.querySelectorAll('#modeExifContent .module').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#sidebarExif .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('exif-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+  if(name === 'dashboard') updateDashboard();
+  if(name === 'batch') updateBatchUI();
+  if(name === 'privacy') updatePrivacyTab();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TOAST & COPY
+══════════════════════════════════════════════════════════════════════════════ */
+function toast(msg, type='ok'){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type}`;
+  t.classList.add('show'); clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 3500);
+}
+function showToast(msg, type='success'){ toast(msg, type === 'success' ? 'ok' : type); }
+
+function copyText(text){
+  navigator.clipboard.writeText(text).then(() => toast('📋 Disalin!','ok')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta); toast('📋 Disalin!','ok');
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   USERNAME SEARCH
+══════════════════════════════════════════════════════════════════════════════ */
+const PLATFORMS = [
+  {name:'GitHub',icon:'🐙',url:'https://github.com/{u}'},
+  {name:'Twitter/X',icon:'🐦',url:'https://twitter.com/{u}'},
+  {name:'Instagram',icon:'📸',url:'https://instagram.com/{u}'},
+  {name:'TikTok',icon:'🎵',url:'https://tiktok.com/@{u}'},
+  {name:'YouTube',icon:'▶️',url:'https://youtube.com/@{u}'},
+  {name:'Reddit',icon:'🤖',url:'https://reddit.com/user/{u}'},
+  {name:'Pinterest',icon:'📌',url:'https://pinterest.com/{u}'},
+  {name:'Telegram',icon:'✈️',url:'https://t.me/{u}'},
+  {name:'LinkedIn',icon:'💼',url:'https://linkedin.com/in/{u}'},
+  {name:'Twitch',icon:'🟣',url:'https://twitch.tv/{u}'},
+  {name:'Spotify',icon:'🟢',url:'https://open.spotify.com/user/{u}'},
+  {name:'SoundCloud',icon:'🎧',url:'https://soundcloud.com/{u}'},
+  {name:'Behance',icon:'🎨',url:'https://behance.net/{u}'},
+  {name:'Dribbble',icon:'🏀',url:'https://dribbble.com/{u}'},
+  {name:'Dev.to',icon:'👨‍💻',url:'https://dev.to/{u}'},
+  {name:'Medium',icon:'✍️',url:'https://medium.com/@{u}'},
+  {name:'Gitlab',icon:'🦊',url:'https://gitlab.com/{u}'},
+  {name:'Keybase',icon:'🔑',url:'https://keybase.io/{u}'},
+  {name:'Linktree',icon:'🌳',url:'https://linktr.ee/{u}'},
+  {name:'Patreon',icon:'🎯',url:'https://patreon.com/{u}'},
+  {name:'ProductHunt',icon:'🐱',url:'https://producthunt.com/@{u}'},
+  {name:'HackerNews',icon:'🟠',url:'https://news.ycombinator.com/user?id={u}'},
+  {name:'Steam',icon:'🎮',url:'https://steamcommunity.com/id/{u}'},
+  {name:'Fiverr',icon:'💚',url:'https://fiverr.com/{u}'},
+  {name:'Codepen',icon:'✏️',url:'https://codepen.io/{u}'},
+  {name:'Replit',icon:'💻',url:'https://replit.com/@{u}'},
+];
+
+function searchUsername(){
+  const u = document.getElementById('uname-inp').value.trim();
+  if(!u){ toast('Masukkan username dulu!','err'); return; }
+  const grid = document.getElementById('uname-results');
+  const prog = document.getElementById('uname-prog');
+  prog.style.width = '0%';
+  grid.innerHTML = PLATFORMS.map((p,i) => `
+    <a class="uname-item checking" id="ui-${i}" href="${p.url.replace('{u}',u)}" target="_blank" rel="noopener">
+      <span>${p.icon}</span>
+      <div><div style="font-weight:600;font-size:.8rem;">${p.name}</div><div class="plat">${p.url.replace('{u}',u).replace('https://','').split('/')[0]}</div></div>
+      <span class="status">⏳</span>
+    </a>`).join('');
+  PLATFORMS.forEach((_,i) => {
+    setTimeout(() => {
+      const el = document.getElementById(`ui-${i}`);
+      if(el){ el.classList.remove('checking'); el.querySelector('.status').textContent = '🔗'; }
+      prog.style.width = `${((i+1)/PLATFORMS.length)*100}%`;
+    }, i*60+200);
+  });
+  setTimeout(() => toast(`✅ ${PLATFORMS.length} platform siap!`,'ok'), PLATFORMS.length*60+400);
+}
+
+function clearUname(){
+  document.getElementById('uname-inp').value = '';
+  document.getElementById('uname-results').innerHTML = '';
+  document.getElementById('uname-prog').style.width = '0%';
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   EMAIL ANALYZER
+══════════════════════════════════════════════════════════════════════════════ */
+const DISPOSABLE = ['mailinator','guerrillamail','tempmail','throwam','yopmail','sharklasers','trashmail','getairmail','dispostable','fakeinbox','mailnull','spamgourmet','maildrop','tempr','discard','mailexpire','spamex','mailnesia','crazymailing','discardmail','nobulk'];
+
+function analyzeEmail(){
+  const email = document.getElementById('email-inp').value.trim();
+  const el = document.getElementById('email-result');
+  if(!email){ toast('Masukkan email!','err'); return; }
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+  if(!valid){ el.innerHTML = `<span class="badge badge-err">❌ Format Tidak Valid</span>`; return; }
+  const [local, domain] = email.split('@');
+  const domainParts = domain.split('.'), tld = domainParts.slice(-1)[0], sld = domainParts.slice(-2)[0];
+  const isDisposable = DISPOSABLE.some(d => domain.toLowerCase().includes(d));
+  const hasPlus = local.includes('+'), hasDot = local.includes('.');
+  let risk = isDisposable ? 60 : 0;
+  if(local.length <= 3) risk += 15; if(/\d{4,}/.test(local)) risk += 10;
+  const riskBadge = risk >= 60 ? '<span class="badge badge-err">⚠️ Disposable / Risiko Tinggi</span>' : risk >= 20 ? '<span class="badge badge-warn">⚠️ Perlu Verifikasi</span>' : '<span class="badge badge-ok">✅ Terlihat Sah</span>';
+  el.innerHTML = `<div style="margin-bottom:12px;">${riskBadge}</div>
+    <div class="result-row"><span class="result-key">Email Lengkap</span><span class="result-val">${email}</span></div>
+    <div class="result-row"><span class="result-key">Local Part</span><span class="result-val">${local}</span></div>
+    <div class="result-row"><span class="result-key">Domain</span><span class="result-val">${domain}</span></div>
+    <div class="result-row"><span class="result-key">TLD</span><span class="result-val">.${tld}</span></div>
+    <div class="result-row"><span class="result-key">Disposable?</span><span class="result-val">${isDisposable?'⚠️ YA':'✅ Tidak'}</span></div>
+    <div class="result-row"><span class="result-key">Risk Score</span><span class="result-val">${risk}%</span></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="https://www.google.com/search?q=%22${encodeURIComponent(email)}%22" target="_blank" class="btn btn-b btn-sm">🔍 Google</a>
+      <a href="https://mxtoolbox.com/SuperTool.aspx?action=mx%3a${encodeURIComponent(domain)}" target="_blank" class="btn btn-sm">📡 MX Check</a>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   IP LOOKUP
+══════════════════════════════════════════════════════════════════════════════ */
+async function lookupIP(ip){
+  const inp = ip || document.getElementById('ip-inp').value.trim() || '';
+  const el = document.getElementById('ip-result');
+  el.textContent = '⏳ Mengambil data...'; el.classList.remove('empty');
+  try{
+    const r = await fetch(inp ? `https://ipapi.co/${inp}/json/` : 'https://ipapi.co/json/');
+    const d = await r.json();
+    if(d.error){ el.innerHTML = `<span class="badge badge-err">❌ ${d.reason||'IP tidak valid'}</span>`; return; }
+    el.innerHTML = `<div style="margin-bottom:12px;"><span class="badge badge-info">🌐 ${d.ip}</span></div>
+      <div class="result-row"><span class="result-key">IP</span><span class="result-val">${d.ip}</span></div>
+      <div class="result-row"><span class="result-key">Hostname</span><span class="result-val">${d.hostname||'—'}</span></div>
+      <div class="result-row"><span class="result-key">Kota</span><span class="result-val">${d.city||'—'}</span></div>
+      <div class="result-row"><span class="result-key">Negara</span><span class="result-val">${d.country_name||'—'} ${d.country||''}</span></div>
+      <div class="result-row"><span class="result-key">Koordinat</span><span class="result-val">${d.latitude||'—'}, ${d.longitude||'—'}</span></div>
+      <div class="result-row"><span class="result-key">Timezone</span><span class="result-val">${d.timezone||'—'}</span></div>
+      <div class="result-row"><span class="result-key">ISP / Org</span><span class="result-val">${d.org||'—'}</span></div>
+      <div class="result-row"><span class="result-key">ASN</span><span class="result-val">${d.asn||'—'}</span></div>
+      <div style="margin-top:12px;"><a href="https://www.google.com/maps?q=${d.latitude},${d.longitude}" target="_blank" class="btn btn-b btn-sm">🗺️ Lihat di Maps</a></div>`;
+  }catch(e){ el.innerHTML = '<span class="badge badge-err">❌ Gagal — cek koneksi</span>'; }
+}
+async function myIP(){ document.getElementById('ip-inp').value=''; await lookupIP(''); }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   DNS LOOKUP
+══════════════════════════════════════════════════════════════════════════════ */
+async function dnsLookup(){
+  const domain = document.getElementById('dns-inp').value.trim();
+  const type = document.getElementById('dns-type').value;
+  const el = document.getElementById('dns-result');
+  if(!domain){ toast('Masukkan domain!','err'); return; }
+  el.textContent = `⏳ Querying ${type}...`; el.classList.remove('empty');
+  try{
+    const r = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${type}`);
+    const d = await r.json();
+    if(!d.Answer && !d.Authority){ el.innerHTML = `<span class="badge badge-warn">⚠️ Tidak ada record ${type}</span>`; return; }
+    const records = (d.Answer||d.Authority||[]);
+    el.innerHTML = `<div style="margin-bottom:12px;"><span class="badge badge-ok">✅ ${records.length} Record</span></div>
+      ${records.map(rec => `<div class="result-row"><span class="result-key">TTL:${rec.TTL}</span><span class="result-val">${rec.data}</span></div>`).join('')}`;
+  }catch(e){ el.innerHTML = '<span class="badge badge-err">❌ DNS Query gagal</span>'; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   HASH GENERATOR
+══════════════════════════════════════════════════════════════════════════════ */
+async function sha(algo, msg){
+  const buf = await crypto.subtle.digest(algo, new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+function md5(s){function safeAdd(a,b){const c=(a&0xffff)+(b&0xffff);return((a>>16)+(b>>16)+(c>>16))<<16|c&0xffff;}function bitRotLeft(a,b){return a<<b|a>>>32-b;}function md5cmn(q,a,b,x,s,t){return safeAdd(bitRotLeft(safeAdd(safeAdd(a,q),safeAdd(x,t)),s),b);}function md5ff(a,b,c,d,x,s,t){return md5cmn(b&c|~b&d,a,b,x,s,t);}function md5gg(a,b,c,d,x,s,t){return md5cmn(b&d|c&~d,a,b,x,s,t);}function md5hh(a,b,c,d,x,s,t){return md5cmn(b^c^d,a,b,x,s,t);}function md5ii(a,b,c,d,x,s,t){return md5cmn(c^(b|~d),a,b,x,s,t);}function str2binl(s){const a={};const mask=(1<<8)-1;for(let i=0;i<s.length*8;i+=8)a[i>>5]|=(s.charCodeAt(i/8)&mask)<<(i%32);return a;}function binl2hex(a){const hex='0123456789abcdef';let s='';for(let i=0;i<a.length*4;i++)s+=hex.charAt(a[i>>2]>>((i%4)*8+4)&0xF)+hex.charAt(a[i>>2]>>((i%4)*8)&0xF);return s;}function binlMD5(x,len){x[len>>5]|=0x80<<((len)%32);x[(((len+64)>>>9)<<4)+14]=len;let a=1732584193,b=-271733879,c=-1732584194,d=271733878;for(let i=0;i<x.length;i+=16){const[oa,ob,oc,od]=[a,b,c,d];a=md5ff(a,b,c,d,x[i],7,-680876936);d=md5ff(d,a,b,c,x[i+1],12,-389564586);c=md5ff(c,d,a,b,x[i+2],17,606105819);b=md5ff(b,c,d,a,x[i+3],22,-1044525330);a=md5ff(a,b,c,d,x[i+4],7,-176418897);d=md5ff(d,a,b,c,x[i+5],12,1200080426);c=md5ff(c,d,a,b,x[i+6],17,-1473231341);b=md5ff(b,c,d,a,x[i+7],22,-45705983);a=md5ff(a,b,c,d,x[i+8],7,1770035416);d=md5ff(d,a,b,c,x[i+9],12,-1958414417);c=md5ff(c,d,a,b,x[i+10],17,-42063);b=md5ff(b,c,d,a,x[i+11],22,-1990404162);a=md5ff(a,b,c,d,x[i+12],7,1804603682);d=md5ff(d,a,b,c,x[i+13],12,-40341101);c=md5ff(c,d,a,b,x[i+14],17,-1502002290);b=md5ff(b,c,d,a,x[i+15],22,1236535329);a=md5gg(a,b,c,d,x[i+1],5,-165796510);d=md5gg(d,a,b,c,x[i+6],9,-1069501632);c=md5gg(c,d,a,b,x[i+11],14,643717713);b=md5gg(b,c,d,a,x[i],20,-373897302);a=md5gg(a,b,c,d,x[i+5],5,-701558691);d=md5gg(d,a,b,c,x[i+10],9,38016083);c=md5gg(c,d,a,b,x[i+15],14,-660478335);b=md5gg(b,c,d,a,x[i+4],20,-405537848);a=md5gg(a,b,c,d,x[i+9],5,568446438);d=md5gg(d,a,b,c,x[i+14],9,-1019803690);c=md5gg(c,d,a,b,x[i+3],14,-187363961);b=md5gg(b,c,d,a,x[i+8],20,1163531501);a=md5gg(a,b,c,d,x[i+13],5,-1444681467);d=md5gg(d,a,b,c,x[i+2],9,-51403784);c=md5gg(c,d,a,b,x[i+7],14,1735328473);b=md5gg(b,c,d,a,x[i+12],20,-1926607734);a=md5hh(a,b,c,d,x[i+5],4,-378558);d=md5hh(d,a,b,c,x[i+8],11,-2022574463);c=md5hh(c,d,a,b,x[i+11],16,1839030562);b=md5hh(b,c,d,a,x[i+14],23,-35309556);a=md5hh(a,b,c,d,x[i+1],4,-1530992060);d=md5hh(d,a,b,c,x[i+4],11,1272893353);c=md5hh(c,d,a,b,x[i+7],16,-155497632);b=md5hh(b,c,d,a,x[i+10],23,-1094730640);a=md5hh(a,b,c,d,x[i+13],4,681279174);d=md5hh(d,a,b,c,x[i],11,-358537222);c=md5hh(c,d,a,b,x[i+3],16,-722521979);b=md5hh(b,c,d,a,x[i+6],23,76029189);a=md5hh(a,b,c,d,x[i+9],4,-640364487);d=md5hh(d,a,b,c,x[i+12],11,-421815835);c=md5hh(c,d,a,b,x[i+15],16,530742520);b=md5hh(b,c,d,a,x[i+2],23,-995338651);a=md5ii(a,b,c,d,x[i],6,-198630844);d=md5ii(d,a,b,c,x[i+7],10,1126891415);c=md5ii(c,d,a,b,x[i+14],15,-1416354905);b=md5ii(b,c,d,a,x[i+5],21,-57434055);a=md5ii(a,b,c,d,x[i+12],6,1700485571);d=md5ii(d,a,b,c,x[i+3],10,-1894986606);c=md5ii(c,d,a,b,x[i+10],15,-1051523);b=md5ii(b,c,d,a,x[i+1],21,-2054922799);a=md5ii(a,b,c,d,x[i+8],6,1873313359);d=md5ii(d,a,b,c,x[i+15],10,-30611744);c=md5ii(c,d,a,b,x[i+6],15,-1560198380);b=md5ii(b,c,d,a,x[i+13],21,1309151649);a=md5ii(a,b,c,d,x[i+4],6,-145523070);d=md5ii(d,a,b,c,x[i+11],10,-1120210379);c=md5ii(c,d,a,b,x[i+2],15,718787259);b=md5ii(b,c,d,a,x[i+9],21,-343485551);a=safeAdd(a,oa);b=safeAdd(b,ob);c=safeAdd(c,oc);d=safeAdd(d,od);}return[a,b,c,d];}const bl=str2binl(s);bl[s.length>>2]|=0x80<<((s.length*8)%32);bl[(((s.length*8+64)>>>9)<<4)+14]=s.length*8;return binl2hex(binlMD5(bl,s.length*8));}
+
+async function generateHashes(){
+  const text = document.getElementById('hash-inp').value;
+  if(!text){ toast('Masukkan teks!','err'); return; }
+  const el = document.getElementById('hash-results');
+  el.innerHTML = '<div style="opacity:.5;font-size:.8rem;margin:10px 0;">⏳ Generating...</div>';
+  const algos = [{name:'MD5',val:md5(text)},{name:'SHA-1',val:await sha('SHA-1',text)},{name:'SHA-256',val:await sha('SHA-256',text)},{name:'SHA-384',val:await sha('SHA-384',text)},{name:'SHA-512',val:await sha('SHA-512',text)}];
+  el.innerHTML = algos.map(a => `<div class="hash-row"><span class="hash-algo">${a.name}</span><span class="hash-val">${a.val}</span><button class="copy-btn" onclick="copyText('${a.val}')">Copy</button></div>`).join('');
+}
+
+async function checkHash(){
+  const text = document.getElementById('hash-check-inp').value;
+  const hash = document.getElementById('hash-check-hash').value.trim().toLowerCase();
+  const el = document.getElementById('hash-check-result');
+  if(!text||!hash){ toast('Isi kedua field!','err'); return; }
+  const algos = [{n:'MD5',v:md5(text)},{n:'SHA-1',v:await sha('SHA-1',text)},{n:'SHA-256',v:await sha('SHA-256',text)},{n:'SHA-384',v:await sha('SHA-384',text)},{n:'SHA-512',v:await sha('SHA-512',text)}];
+  const match = algos.find(a => a.v === hash);
+  el.innerHTML = match ? `<span class="badge badge-ok">✅ COCOK — ${match.n}</span>` : `<span class="badge badge-err">❌ TIDAK COCOK</span>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ENCODE / DECODE
+══════════════════════════════════════════════════════════════════════════════ */
+let encMode = 'base64';
+function setEncMode(m,el){ encMode=m; document.querySelectorAll('.inner-tab').forEach(t=>t.classList.remove('active')); el.classList.add('active'); document.getElementById('enc-inp').value=''; document.getElementById('enc-out').value=''; }
+const MORSE={'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---','K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-','U':'..-','V':'...-','W':'.--','X':'-..-','Y':'-.--','Z':'--..','0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',' ':'/'};
+const MORSE_REV=Object.fromEntries(Object.entries(MORSE).map(([k,v])=>[v,k]));
+function encodeText(t){switch(encMode){case 'base64':return btoa(unescape(encodeURIComponent(t)));case 'url':return encodeURIComponent(t);case 'html':return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');case 'hex':return[...t].map(c=>c.charCodeAt(0).toString(16).padStart(2,'0')).join(' ');case 'binary':return[...t].map(c=>c.charCodeAt(0).toString(2).padStart(8,'0')).join(' ');case 'rot13':return t.replace(/[a-zA-Z]/g,c=>{const a=c<='Z'?65:97;return String.fromCharCode(((c.charCodeAt(0)-a+13)%26)+a);});case 'morse':return t.toUpperCase().split('').map(c=>MORSE[c]||'?').join(' ');}}
+function decodeText(t){try{switch(encMode){case 'base64':return decodeURIComponent(escape(atob(t)));case 'url':return decodeURIComponent(t);case 'html':return t.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"');case 'hex':return t.trim().split(/\s+/).map(h=>String.fromCharCode(parseInt(h,16))).join('');case 'binary':return t.trim().split(/\s+/).map(b=>String.fromCharCode(parseInt(b,2))).join('');case 'rot13':return encodeText(t);case 'morse':return t.split(' ').map(c=>MORSE_REV[c]||'?').join('');}}catch{return '❌ Gagal decode';}}
+function doEncode(){document.getElementById('enc-out').value=encodeText(document.getElementById('enc-inp').value);}
+function doDecode(){document.getElementById('enc-out').value=decodeText(document.getElementById('enc-inp').value);}
+function liveEncode(){if(document.getElementById('enc-inp').value)doEncode();}
+function copyEnc(){copyText(document.getElementById('enc-out').value);}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PASSWORD GENERATOR
+══════════════════════════════════════════════════════════════════════════════ */
+function generatePass(){
+  const len=+document.getElementById('pass-len').value;
+  const count=Math.min(+document.getElementById('pass-count').value||5,20);
+  const upper=document.getElementById('pass-upper').checked;
+  const lower=document.getElementById('pass-lower').checked;
+  const num=document.getElementById('pass-num').checked;
+  const sym=document.getElementById('pass-sym').checked;
+  const noAmb=document.getElementById('pass-noamb').checked;
+  let chars='';
+  if(upper) chars+=noAmb?'ABCDEFGHJKLMNPQRSTUVWXYZ':'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if(lower) chars+=noAmb?'abcdefghjkmnpqrstuvwxyz':'abcdefghijklmnopqrstuvwxyz';
+  if(num) chars+=noAmb?'23456789':'0123456789';
+  if(sym) chars+='!@#$%^&*()-_=+[]{}|;:,.<>?';
+  if(!chars){ toast('Pilih minimal satu opsi!','err'); return; }
+  const passwords=Array.from({length:count},()=>Array.from(crypto.getRandomValues(new Uint32Array(len))).map(v=>chars[v%chars.length]).join(''));
+  const p=passwords[0];
+  let str=0;
+  if(p.match(/[a-z]/))str++;if(p.match(/[A-Z]/))str++;if(p.match(/[0-9]/))str++;if(p.match(/[^a-zA-Z0-9]/))str++;if(len>=16)str++;if(len>=24)str++;
+  const sl=['Sangat Lemah','Lemah','Cukup','Kuat','Sangat Kuat','Ekstrem'][Math.min(str,5)];
+  const sc=['#ff4444','#ff8844','#ffcc00','#88ff44','#44ff88','#00ffcc'][Math.min(str,5)];
+  document.getElementById('pass-strength').innerHTML=`<div class="card-label">Kekuatan</div><div style="color:${sc};font-weight:700;">${sl}</div><div class="progress-wrap"><div class="progress-bar" style="width:${(str/5)*100}%;background:${sc};"></div></div>`;
+  document.getElementById('pass-results').innerHTML=passwords.map(p=>`<div class="hash-row"><span class="hash-val" style="font-size:.82rem;">${p}</span><button class="copy-btn" onclick="copyText('${p.replace(/'/g,"\\'")}')">Copy</button></div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   URL ANALYZER
+══════════════════════════════════════════════════════════════════════════════ */
+function analyzeURL(){
+  const raw=document.getElementById('url-inp').value.trim();
+  const el=document.getElementById('url-result');
+  if(!raw){ toast('Masukkan URL!','err'); return; }
+  let u;
+  try{u=new URL(raw.startsWith('http')?raw:'https://'+raw);}catch{el.innerHTML='<span class="badge badge-err">❌ URL tidak valid</span>';return;}
+  const params=[...u.searchParams.entries()];
+  const suspicious=['exec','eval','cmd','shell','passwd','../../','<script'].some(k=>raw.toLowerCase().includes(k));
+  el.innerHTML=`<div style="margin-bottom:12px;">${suspicious?'<span class="badge badge-err">⚠️ Mencurigakan</span>':'<span class="badge badge-ok">✅ OK</span>'}</div>
+    <div class="result-row"><span class="result-key">Protocol</span><span class="result-val">${u.protocol}</span></div>
+    <div class="result-row"><span class="result-key">Host</span><span class="result-val">${u.hostname}</span></div>
+    <div class="result-row"><span class="result-key">Port</span><span class="result-val">${u.port||'default'}</span></div>
+    <div class="result-row"><span class="result-key">Path</span><span class="result-val">${u.pathname||'/'}</span></div>
+    <div class="result-row"><span class="result-key">Query String</span><span class="result-val">${u.search||'—'}</span></div>
+    <div class="result-row"><span class="result-key">Fragment</span><span class="result-val">${u.hash||'—'}</span></div>
+    ${params.length?`<div style="margin-top:10px;"><div class="card-label">Query Params (${params.length})</div>${params.map(([k,v])=>`<div class="result-row"><span class="result-key">${k}</span><span class="result-val">${v}</span></div>`).join('')}</div>`:''}
+    <div style="margin-top:12px;"><a href="https://www.virustotal.com/gui/url/${btoa(raw)}" target="_blank" class="btn btn-b btn-sm">🦠 VirusTotal</a></div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   EMAIL HEADER ANALYZER
+══════════════════════════════════════════════════════════════════════════════ */
+function analyzeHeaders(){
+  const raw=document.getElementById('header-inp').value.trim();
+  const el=document.getElementById('header-result');
+  if(!raw){ toast('Paste email header!','err'); return; }
+  const normalized=raw.replace(/\r\n[ \t]+/g,' ').replace(/\n[ \t]+/g,' ');
+  const lines=normalized.split(/\r?\n/);
+  const headers={};
+  lines.forEach(l=>{const m=l.match(/^([^:]+):\s*(.*)/);if(m)headers[m[1].toLowerCase().trim()]=m[2].trim();});
+  const from=headers['from']||'—',to=headers['to']||'—',subj=headers['subject']||'—',date=headers['date']||'—';
+  const replyTo=headers['reply-to']||'—',returnPath=headers['return-path']||'—';
+  const authResults=headers['authentication-results']||'';
+  const spfPass=authResults.toLowerCase().includes('spf=pass');
+  const dkimPass=authResults.toLowerCase().includes('dkim=pass');
+  const fromDomain=(from.match(/@([^\s>]+)/)||[])[1]||'';
+  const rpDomain=(returnPath.match(/@([^\s>]+)/)||[])[1]||'';
+  const spoofHint=fromDomain&&rpDomain&&fromDomain!==rpDomain;
+  el.innerHTML=`<div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;">
+    ${spfPass?'<span class="badge badge-ok">✅ SPF Pass</span>':'<span class="badge badge-err">⚠️ SPF Fail</span>'}
+    ${dkimPass?'<span class="badge badge-ok">✅ DKIM Pass</span>':'<span class="badge badge-err">⚠️ DKIM Fail</span>'}
+    ${spoofHint?'<span class="badge badge-err">🚨 Spoofing Alert</span>':''}
+    </div>
+    <div class="result-row"><span class="result-key">From</span><span class="result-val">${from}</span></div>
+    <div class="result-row"><span class="result-key">To</span><span class="result-val">${to}</span></div>
+    <div class="result-row"><span class="result-key">Subject</span><span class="result-val">${subj}</span></div>
+    <div class="result-row"><span class="result-key">Date</span><span class="result-val">${date}</span></div>
+    <div class="result-row"><span class="result-key">Reply-To</span><span class="result-val">${replyTo}</span></div>
+    <div class="result-row"><span class="result-key">Return-Path</span><span class="result-val">${returnPath}</span></div>
+    ${spoofHint?`<div style="margin-top:10px;padding:12px;background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.25);border-radius:8px;font-size:.8rem;">🚨 <strong>Spoofing:</strong> From (<code>${fromDomain}</code>) ≠ Return-Path (<code>${rpDomain}</code>)</div>`:''}`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   USER-AGENT PARSER
+══════════════════════════════════════════════════════════════════════════════ */
+function myUA(){ document.getElementById('ua-inp').value=navigator.userAgent; parseUA(); }
+function parseUA(){
+  const ua=document.getElementById('ua-inp').value.trim();
+  const el=document.getElementById('ua-result');
+  if(!ua){ toast('Masukkan UA!','err'); return; }
+  let browser='Unknown',version='',os='Unknown',device='Desktop',engine='Unknown';
+  if(ua.includes('Edg/')){browser='Microsoft Edge';version=(ua.match(/Edg\/([\d.]+)/)||[])[1]||'';}
+  else if(ua.includes('Chrome/')){browser='Chrome';version=(ua.match(/Chrome\/([\d.]+)/)||[])[1]||'';}
+  else if(ua.includes('Firefox/')){browser='Firefox';version=(ua.match(/Firefox\/([\d.]+)/)||[])[1]||'';}
+  else if(ua.includes('Safari/')&&!ua.includes('Chrome')){browser='Safari';version=(ua.match(/Version\/([\d.]+)/)||[])[1]||'';}
+  if(ua.includes('WebKit'))engine='WebKit';if(ua.includes('Gecko/'))engine='Gecko';if(ua.includes('Blink'))engine='Blink';
+  if(ua.includes('Windows NT 10.0'))os='Windows 10/11';else if(ua.includes('Mac OS X'))os='macOS';else if(ua.includes('Android'))os='Android '+(ua.match(/Android ([\d.]+)/)||[])[1];else if(ua.includes('iPhone'))os='iOS (iPhone)';else if(ua.includes('Linux'))os='Linux';
+  if(ua.includes('Mobile')||ua.includes('iPhone'))device='Mobile';else if(ua.includes('iPad'))device='Tablet';
+  el.innerHTML=`<div class="result-row"><span class="result-key">Browser</span><span class="result-val">${browser} ${version}</span></div>
+    <div class="result-row"><span class="result-key">Engine</span><span class="result-val">${engine}</span></div>
+    <div class="result-row"><span class="result-key">OS</span><span class="result-val">${os}</span></div>
+    <div class="result-row"><span class="result-key">Device</span><span class="result-val">${device}</span></div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   COLOR CONVERTER
+══════════════════════════════════════════════════════════════════════════════ */
+function convertColor(){
+  const inp=document.getElementById('color-inp').value.trim();
+  const el=document.getElementById('color-result');
+  const prev=document.getElementById('color-preview');
+  if(!inp) return;
+  let r,g,b,valid=false;
+  const hexMatch=inp.match(/^#?([0-9a-fA-F]{6})$/);
+  if(hexMatch){const h=hexMatch[1];r=parseInt(h.slice(0,2),16);g=parseInt(h.slice(2,4),16);b=parseInt(h.slice(4,6),16);valid=true;}
+  const rgbMatch=inp.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/i);
+  if(rgbMatch){r=+rgbMatch[1];g=+rgbMatch[2];b=+rgbMatch[3];valid=true;}
+  if(!valid){el.innerHTML='<span class="badge badge-err">❌ Format tidak dikenali</span>';return;}
+  const hex=`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`.toUpperCase();
+  const rN=r/255,gN=g/255,bN=b/255,max=Math.max(rN,gN,bN),min=Math.min(rN,gN,bN),d=max-min;
+  let h2=0,s=0,l=(max+min)/2;
+  if(d){s=d/(1-Math.abs(2*l-1));if(max===rN)h2=((gN-bN)/d+6)%6;else if(max===gN)h2=(bN-rN)/d+2;else h2=(rN-gN)/d+4;h2*=60;}
+  const isDark=(r*299+g*587+b*114)/1000<128;
+  prev.style.background=hex;prev.style.color=isDark?'#fff':'#000';prev.textContent=hex;
+  document.getElementById('color-pick').value=hex;
+  el.innerHTML=`<div class="result-row"><span class="result-key">HEX</span><span class="result-val">${hex} <button class="copy-btn" onclick="copyText('${hex}')">Copy</button></span></div>
+    <div class="result-row"><span class="result-key">RGB</span><span class="result-val">rgb(${r},${g},${b}) <button class="copy-btn" onclick="copyText('rgb(${r},${g},${b})')">Copy</button></span></div>
+    <div class="result-row"><span class="result-key">HSL</span><span class="result-val">hsl(${Math.round(h2)},${Math.round(s*100)}%,${Math.round(l*100)}%)</span></div>
+    <div class="result-row"><span class="result-key">Luminance</span><span class="result-val">${isDark?'Gelap':'Terang'}</span></div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   NUMBER BASE
+══════════════════════════════════════════════════════════════════════════════ */
+function numConvert(from){
+  const dec=document.getElementById('num-dec'),bin=document.getElementById('num-bin'),oct=document.getElementById('num-oct'),hex=document.getElementById('num-hex'),extra=document.getElementById('num-extra');
+  let n;
+  try{if(from==='dec')n=parseInt(dec.value,10);else if(from==='bin')n=parseInt(bin.value,2);else if(from==='oct')n=parseInt(oct.value,8);else if(from==='hex')n=parseInt(hex.value,16);}catch{}
+  if(isNaN(n)||n===undefined) return;
+  if(from!=='dec')dec.value=n;if(from!=='bin')bin.value=n.toString(2);if(from!=='oct')oct.value=n.toString(8);if(from!=='hex')hex.value=n.toString(16).toUpperCase();
+  extra.innerHTML=`<div class="result-row"><span class="result-key">Nilai</span><span class="result-val">${n.toLocaleString()}</span></div><div class="result-row"><span class="result-key">ASCII</span><span class="result-val">${n>=32&&n<=126?String.fromCharCode(n):'(non-printable)'}</span></div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TIMESTAMP
+══════════════════════════════════════════════════════════════════════════════ */
+function tsNow(){ document.getElementById('ts-unix').value=Math.floor(Date.now()/1000); tsToDate(); }
+function tsToDate(){
+  const ts=+document.getElementById('ts-unix').value;
+  const el=document.getElementById('ts-result');
+  if(!ts) return;
+  const d=new Date(ts*1000);
+  el.innerHTML=`<div class="result-row"><span class="result-key">UTC</span><span class="result-val">${d.toUTCString()}</span></div>
+    <div class="result-row"><span class="result-key">ISO 8601</span><span class="result-val">${d.toISOString()}</span></div>
+    <div class="result-row"><span class="result-key">WIB</span><span class="result-val">${d.toLocaleString('id-ID',{timeZone:'Asia/Jakarta'})}</span></div>
+    <div class="result-row"><span class="result-key">Hari</span><span class="result-val">${['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'][d.getDay()]}</span></div>`;
+}
+function dateToTs(){
+  const v=document.getElementById('ts-date').value;const el=document.getElementById('ts-result');
+  if(!v) return;
+  const d=new Date(v),ts=Math.floor(d.getTime()/1000);
+  document.getElementById('ts-unix').value=ts;
+  el.innerHTML=`<div class="result-row"><span class="result-key">Unix (detik)</span><span class="result-val">${ts} <button class="copy-btn" onclick="copyText('${ts}')">Copy</button></span></div>
+    <div class="result-row"><span class="result-key">ISO 8601</span><span class="result-val">${d.toISOString()}</span></div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   EXIF STATE & INIT
+══════════════════════════════════════════════════════════════════════════════ */
+let exifFiles=[];
+let currentMap=null,statsChart=null,histChart=null;
+let sessionHistory=JSON.parse(localStorage.getItem('mrkzHistory')||'[]');
+
+document.addEventListener('DOMContentLoaded',()=>{
+  setupUpload();initCharts();renderHistory();updateDashboard();
+  generatePass();convertColor();
+});
+
+function setupUpload(){
+  const zone=document.getElementById('uploadZone'),inp=document.getElementById('fileInput');
+  zone.addEventListener('click',()=>inp.click());
+  inp.addEventListener('change',e=>handleFiles([...e.target.files]));
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));
+  zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');handleFiles([...e.dataTransfer.files].filter(f=>f.type.match('image/jpe?g')));});
+}
+
+async function handleFiles(rawFiles){
+  if(!rawFiles.length) return;
+  showToast(`⏳ Menganalisis ${rawFiles.length} berkas…`,'info');
+  for(const f of rawFiles){const r=await analyzeFile(f);exifFiles.push(r);}
+  updateBatchUI();updateDashboard();appendHistory();
+  document.getElementById('navBatchCount').textContent=exifFiles.length;
+  showToast(`✅ ${exifFiles.length} berkas dianalisis!`,'success');
+}
+
+function analyzeFile(file){
+  return new Promise(resolve=>{
+    const reader=new FileReader();
+    reader.onload=async e=>{
+      const dataUrl=e.target.result;let exif=null,gps=null,allTags={};
+      try{exif=piexif.load(dataUrl);allTags=extractAllTags(exif);if(exif.GPS&&exif.GPS[piexif.GPSIFD.GPSLatitude])gps=parseGPS(exif.GPS);}catch(_){}
+      const img=new Image();
+      img.onload=()=>resolve({name:file.name,size:file.size,type:file.type,dataUrl,exif,allTags,gps,hasGPS:!!gps,width:img.width,height:img.height,privacyRisk:calcRisk(exif,gps),timestamp:new Date().toISOString()});
+      img.onerror=()=>resolve({name:file.name,size:file.size,dataUrl,exif,allTags,gps,hasGPS:!!gps,width:0,height:0,privacyRisk:calcRisk(exif,gps),timestamp:new Date().toISOString()});
+      img.src=dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function extractAllTags(exif){
+  if(!exif) return {};const tags={};const IFD_NAMES={'0th':'Image','Exif':'Exif','GPS':'GPS','1st':'Thumbnail'};
+  for(const[ifdName,data]of Object.entries(exif)){if(!data||typeof data!=='object')continue;const label=IFD_NAMES[ifdName]||ifdName;for(const[tag,val]of Object.entries(data)){let tagName=tag;try{const map=ifdName==='0th'?piexif.ImageIFD:ifdName==='Exif'?piexif.ExifIFD:ifdName==='GPS'?piexif.GPSIFD:null;if(map){const found=Object.entries(map).find(([,v])=>v==tag);if(found)tagName=found[0];}}catch(_){}tags[`${label}.${tagName}`]=formatTagValue(val);}}return tags;
+}
+function formatTagValue(val){if(Array.isArray(val))return val.map(v=>Array.isArray(v)?`${v[0]}/${v[1]}`:v).join(', ');if(typeof val==='object'&&val!==null)return JSON.stringify(val);return String(val);}
+
+function parseGPS(gpsData){
+  try{
+    const lat=dmsToDD(gpsData[piexif.GPSIFD.GPSLatitude],gpsData[piexif.GPSIFD.GPSLatitudeRef]);
+    const lng=dmsToDD(gpsData[piexif.GPSIFD.GPSLongitude],gpsData[piexif.GPSIFD.GPSLongitudeRef]);
+    if(isNaN(lat)||isNaN(lng))return null;
+    return{lat:lat.toFixed(8),lng:lng.toFixed(8),formatted:`${lat.toFixed(6)}, ${lng.toFixed(6)}`,mapsUrl:`https://www.google.com/maps?q=${lat},${lng}`,satUrl:`https://www.google.com/maps/@${lat},${lng},18z/data=!3m1!1e3`};
+  }catch{return null;}
+}
+function dmsToDD(dms,ref){const d=dms[0][0]/dms[0][1],m=dms[1][0]/dms[1][1],s=dms[2][0]/dms[2][1],dd=d+m/60+s/3600;return(ref==='S'||ref==='W')?-dd:dd;}
+function calcRisk(exif,gps){let r=0;if(gps)r+=50;if(exif?.Exif?.[36867])r+=15;if(exif?.['0th']?.[272])r+=10;if(exif?.['0th']?.[271])r+=5;if(exif?.Exif?.[37510])r+=10;if(exif?.['0th']?.[315])r+=10;return Math.min(r,100);}
+function riskLabel(r){if(r>=70)return['BAHAYA','ribbon-danger','#ff6666'];if(r>=30)return['RISIKO','ribbon-warn','#ffaa00'];return['AMAN','ribbon-safe','#44ff88'];}
+
+function updateBatchUI(){
+  document.getElementById('navBatchCount').textContent=exifFiles.length;
+  const grid=document.getElementById('batchGrid');
+  if(!exifFiles.length){grid.innerHTML='<div style="color:rgba(0,255,204,0.4);padding:40px;text-align:center;grid-column:1/-1;">Belum ada berkas.</div>';return;}
+  grid.innerHTML=exifFiles.map((f,i)=>{
+    const[rl,rc]=riskLabel(f.privacyRisk);
+    const cam=f.allTags['Image.Model']||f.allTags['Image.Make']||'—';
+    const dt=f.allTags['Exif.DateTimeOriginal']||f.allTags['Image.DateTime']||'—';
+    const iso=f.allTags['Exif.ISOSpeedRatings']||'—';
+    return`<div class="batch-card">
+      <img class="batch-thumb" src="${f.dataUrl}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+      <div class="batch-thumb-ph" style="display:none;">🖼️</div>
+      <div class="batch-info">
+        <div class="batch-filename" title="${f.name}">${f.name}</div>
+        <div class="batch-tags">
+          <span class="tag ${f.hasGPS?'tag-gps':'tag-nogps'}">${f.hasGPS?'📍 GPS':'❌ No GPS'}</span>
+          <span class="tag ${rc}">${rl} ${f.privacyRisk}%</span>
+        </div>
+        ${f.hasGPS?`<div class="batch-gps-box"><div class="batch-gps-coord">📍 ${f.gps.formatted}</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;"><a href="${f.gps.mapsUrl}" target="_blank" class="btn btn-b btn-sm" style="font-size:.72rem;padding:4px 10px;">🗺️ Maps</a><button class="btn btn-sm" style="font-size:.72rem;padding:4px 10px;" onclick="reverseGeocode('${f.gps.lat}','${f.gps.lng}')">🏠 Alamat</button></div></div>`:''}
+        <div class="batch-meta">
+          <div class="batch-meta-item"><div class="batch-meta-key">Ukuran</div><div class="batch-meta-val">${fmtSize(f.size)}</div></div>
+          <div class="batch-meta-item"><div class="batch-meta-key">Resolusi</div><div class="batch-meta-val">${f.width&&f.height?f.width+'×'+f.height:'—'}</div></div>
+          <div class="batch-meta-item"><div class="batch-meta-key">ISO</div><div class="batch-meta-val">${iso}</div></div>
+          <div class="batch-meta-item"><div class="batch-meta-key">Kamera</div><div class="batch-meta-val" style="font-size:.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cam}</div></div>
+        </div>
+        <div class="batch-meta-item" style="margin-bottom:10px;"><div class="batch-meta-key">Tanggal</div><div class="batch-meta-val" style="font-size:.75rem;">${dt}</div></div>
+        <div class="risk-bar"><div class="risk-bar-fill" style="width:${f.privacyRisk}%;background:${f.privacyRisk>=70?'#ff4444':f.privacyRisk>=30?'#ffaa00':'#44ff88'}"></div></div>
+        <div style="display:flex;gap:6px;margin-top:12px;">
+          <button class="btn btn-sm" onclick="viewSingle(${i})" style="font-size:.76rem;">👁️ Detail</button>
+          <button class="btn btn-r btn-sm" onclick="removeBatch(${i})" style="font-size:.76rem;">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function viewSingle(i){
+  const f=exifFiles[i];
+  switchMode('exif',document.getElementById('modeExif'));
+  showExifTab('single',null);
+  document.querySelectorAll('#sidebarExif .nav-item').forEach((n,idx)=>{n.classList.toggle('active',idx===1);});
+  document.getElementById('singleEmpty').style.display='none';
+  document.getElementById('singleContent').style.display='block';
+  const img=document.getElementById('imgPreview');img.src=f.dataUrl;img.onload=()=>drawHistogram(img);
+  const meta=document.getElementById('singleMetadata');
+  const[rl,rc]=riskLabel(f.privacyRisk);
+  meta.innerHTML=`<div style="font-family:var(--syne);font-size:1.1rem;font-weight:700;margin-bottom:10px;">${f.name}</div>
+    <div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;"><span class="ribbon ${rc}">${rl} — ${f.privacyRisk}%</span>${f.hasGPS?'<span class="ribbon ribbon-safe">📍 GPS Terdeteksi</span>':'<span class="ribbon ribbon-danger">❌ No GPS</span>'}</div>
+    <div class="section-label">File Info</div>
+    <table class="exif-table"><tr><td>Nama</td><td>${f.name}</td></tr><tr><td>Ukuran</td><td>${fmtSize(f.size)}</td></tr><tr><td>Resolusi</td><td>${f.width}×${f.height}</td></tr></table>
+    ${f.hasGPS?`<div class="section-label" style="margin-top:14px;">GPS</div><table class="exif-table"><tr><td>Koordinat</td><td style="color:var(--b);font-weight:600;">${f.gps.formatted}</td></tr></table><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;"><a href="${f.gps.mapsUrl}" target="_blank" class="btn btn-b btn-sm" style="font-size:.76rem;">🗺️ Maps</a><button class="btn btn-sm" style="font-size:.76rem;" onclick="reverseGeocode('${f.gps.lat}','${f.gps.lng}')">🏠 Alamat</button></div>`:''}
+    <div class="section-label" style="margin-top:14px;">EXIF Tags</div>
+    <table class="exif-table">${Object.entries(f.allTags).slice(0,30).map(([k,v])=>`<tr><td>${k.replace(/^(Image|Exif|GPS)\./,'')}</td><td>${String(v).slice(0,60)}</td></tr>`).join('')}</table>`;
+  const mapEmpty=document.getElementById('mapEmpty'),mapEl=document.getElementById('map');
+  if(f.hasGPS){mapEmpty.style.display='none';mapEl.style.display='block';if(currentMap)currentMap.remove();currentMap=L.map('map').setView([f.gps.lat,f.gps.lng],16);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(currentMap);L.marker([f.gps.lat,f.gps.lng]).addTo(currentMap).bindPopup(`📍 ${f.gps.formatted}`).openPopup();}
+  else{mapEmpty.style.display='flex';mapEl.style.display='none';if(currentMap){currentMap.remove();currentMap=null;}}
+  const raw=document.getElementById('rawExif');
+  raw.innerHTML=Object.keys(f.allTags).length?`<table class="exif-table">${Object.entries(f.allTags).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}</table>`:'Tidak ada EXIF.';
+}
+
+function drawHistogram(imgEl){
+  const tmp=document.createElement('canvas'),ctx=tmp.getContext('2d');
+  const scale=Math.min(1,400/Math.max(imgEl.naturalWidth,imgEl.naturalHeight));
+  tmp.width=Math.round(imgEl.naturalWidth*scale);tmp.height=Math.round(imgEl.naturalHeight*scale);
+  ctx.drawImage(imgEl,0,0,tmp.width,tmp.height);
+  const data=ctx.getImageData(0,0,tmp.width,tmp.height).data;
+  const rH=new Array(256).fill(0),gH=new Array(256).fill(0),bH=new Array(256).fill(0);
+  for(let i=0;i<data.length;i+=4){rH[data[i]]++;gH[data[i+1]]++;bH[data[i+2]]++;}
+  if(histChart)histChart.destroy();
+  const hCtx=document.getElementById('histChart').getContext('2d');
+  histChart=new Chart(hCtx,{type:'line',data:{labels:Array.from({length:256},(_,i)=>i),datasets:[{label:'R',data:rH,borderColor:'rgba(255,80,80,.8)',borderWidth:1,fill:true,backgroundColor:'rgba(255,80,80,.1)',pointRadius:0,tension:.3},{label:'G',data:gH,borderColor:'rgba(80,255,140,.8)',borderWidth:1,fill:true,backgroundColor:'rgba(80,255,140,.1)',pointRadius:0,tension:.3},{label:'B',data:bH,borderColor:'rgba(80,160,255,.8)',borderWidth:1,fill:true,backgroundColor:'rgba(80,160,255,.1)',pointRadius:0,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{labels:{color:'#00ffcc',font:{size:10}}}},scales:{x:{display:false},y:{display:false,beginAtZero:true}}}});
+}
+
+function updateDashboard(){
+  document.getElementById('m-total').textContent=exifFiles.length;
+  const gpsN=exifFiles.filter(f=>f.hasGPS).length;
+  document.getElementById('m-gps').textContent=gpsN;
+  const avgRisk=exifFiles.length?exifFiles.reduce((a,f)=>a+f.privacyRisk,0)/exifFiles.length:0;
+  const[rl,,rc]=riskLabel(avgRisk);
+  const riskEl=document.getElementById('m-risk');riskEl.textContent=rl;riskEl.style.color=rc;
+  document.getElementById('m-edit').textContent=`${Math.round(avgRisk)}%`;
+  if(statsChart){statsChart.data.datasets[0].data=[gpsN,exifFiles.length-gpsN];statsChart.update('none');}
+  const recent=document.getElementById('recentFiles');
+  if(!exifFiles.length){recent.textContent='Belum ada berkas.';}
+  else{recent.innerHTML=exifFiles.slice(-6).reverse().map(f=>{const[rl,rc]=riskLabel(f.privacyRisk);return`<div class="hist-item" style="border-color:${f.privacyRisk>=70?'#ff4444':f.privacyRisk>=30?'#ffaa00':'#44ff88'}"><div><div style="font-size:.84rem;font-weight:600;">${f.name.slice(0,30)}</div><div style="font-size:.73rem;opacity:.6;">${fmtSize(f.size)} • ${f.width}×${f.height}</div></div><span class="ribbon ${rc}" style="font-size:.7rem;">${rl}</span></div>`;}).join('');}
+  const rov=document.getElementById('riskOverview');
+  if(!exifFiles.length){rov.textContent='Belum ada data.';}
+  else{const high=exifFiles.filter(f=>f.privacyRisk>=70).length,med=exifFiles.filter(f=>f.privacyRisk>=30&&f.privacyRisk<70).length,low=exifFiles.filter(f=>f.privacyRisk<30).length;rov.innerHTML=`<div class="metric-grid" style="margin-top:0;"><div class="metric-item"><div class="metric-value" style="color:#ff6666;font-size:1.5rem;">${high}</div><div class="metric-label">Bahaya</div></div><div class="metric-item"><div class="metric-value" style="color:#ffaa00;font-size:1.5rem;">${med}</div><div class="metric-label">Risiko</div></div><div class="metric-item"><div class="metric-value" style="color:#44ff88;font-size:1.5rem;">${low}</div><div class="metric-label">Aman</div></div></div>`;}
+}
+
+function initCharts(){
+  const sc=document.getElementById('statsChart').getContext('2d');
+  statsChart=new Chart(sc,{type:'doughnut',data:{labels:['GPS','No GPS'],datasets:[{data:[0,0],backgroundColor:['rgba(0,255,204,0.7)','rgba(255,68,68,0.5)'],borderColor:['#00ffcc','#ff4444'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#00ffcc',font:{size:11}}}}}});
+  const hc=document.getElementById('histChart').getContext('2d');
+  histChart=new Chart(hc,{type:'line',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}}}});
+}
+
+function processBatch(){showToast('✅ Semua berkas sudah dianalisis!','success');}
+function clearBatch(){exifFiles=[];updateBatchUI();updateDashboard();document.getElementById('navBatchCount').textContent=0;showToast('🗑️ Batch dihapus','info');}
+function removeBatch(i){exifFiles.splice(i,1);updateBatchUI();updateDashboard();document.getElementById('navBatchCount').textContent=exifFiles.length;}
+
+function exportCSV(){
+  const header=['Nama','Ukuran','Lebar','Tinggi','HasGPS','Lat','Lng','Risiko','Kamera','Tanggal'];
+  const rows=exifFiles.map(f=>[f.name,f.size,f.width,f.height,f.hasGPS?'Ya':'Tidak',f.gps?.lat||'',f.gps?.lng||'',f.privacyRisk,(f.allTags['Image.Model']||'').replace(/,/g,''),f.allTags['Exif.DateTimeOriginal']||'']);
+  dlFile([header,...rows].map(r=>r.join(',')).join('\n'),'mrkz-batch.csv','text/csv');
+}
+function exportJSON(){dlFile(JSON.stringify(exifFiles.map(f=>({name:f.name,size:f.size,resolution:`${f.width}×${f.height}`,hasGPS:f.hasGPS,gps:f.gps,privacyRisk:f.privacyRisk,exifTags:f.allTags,timestamp:f.timestamp})),null,2),'mrkz-batch.json','application/json');}
+function exportHTML(){
+  const rows=exifFiles.map((f,i)=>{const[rl]=riskLabel(f.privacyRisk);return`<tr><td>${i+1}</td><td>${f.name}</td><td>${fmtSize(f.size)}</td><td>${f.width}×${f.height}</td><td>${f.hasGPS?'✅':'❌'}</td><td>${f.gps?.formatted||'—'}</td><td>${f.privacyRisk}% (${rl})</td><td>${f.allTags['Image.Model']||'—'}</td></tr>`;}).join('');
+  dlFile(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>MRKZ Report</title><style>body{font-family:monospace;background:#0a0a0a;color:#00ffcc;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px;border:1px solid rgba(0,255,204,0.2)}th{background:rgba(0,255,204,0.1)}</style></head><body><h1>MRKZ.ID EXIF Report — ${new Date().toLocaleString()}</h1><table><thead><tr><th>#</th><th>Nama</th><th>Ukuran</th><th>Resolusi</th><th>GPS</th><th>Koordinat</th><th>Risiko</th><th>Kamera</th></tr></thead><tbody>${rows}</tbody></table></body></html>`,'mrkz-report.html','text/html');
+  showToast('📄 Laporan HTML dibuat!','success');
+}
+function dlFile(content,name,type){const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([content],{type})),download:name});a.click();URL.revokeObjectURL(a.href);showToast(`💾 ${name} diunduh!`,'success');}
+
+function updatePrivacyTab(){
+  const el=document.getElementById('privacySummary');
+  if(!exifFiles.length){el.textContent='Unggah berkas terlebih dahulu.';return;}
+  el.innerHTML=exifFiles.map(f=>{const[rl,rc]=riskLabel(f.privacyRisk);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin:6px 0;background:rgba(0,0,0,0.3);border-radius:10px;border-left:3px solid ${f.privacyRisk>=70?'#ff4444':f.privacyRisk>=30?'#ffaa00':'#44ff88'}"><div><div style="font-size:.84rem;font-weight:600;">${f.name}</div><div style="font-size:.73rem;opacity:.6;">${f.hasGPS?'📍 GPS':'No GPS'} • ${f.allTags['Image.Model']||'—'}</div></div><span class="ribbon ${rc}">${rl} ${f.privacyRisk}%</span></div>`;}).join('');
+}
+function stripAllExif(){showToast('🗑️ Fungsi strip EXIF via piexif.remove()','info');}
+function generatePrivacyReport(){dlFile(JSON.stringify({generated:new Date().toISOString(),totalFiles:exifFiles.length,files:exifFiles.map(f=>({name:f.name,privacyRisk:f.privacyRisk,hasGPS:f.hasGPS,gps:f.gps,exifKeys:Object.keys(f.allTags),timestamp:f.timestamp}))},null,2),'privacy-report.json','application/json');}
+
+async function reverseGeocode(lat,lng){
+  showToast('🔍 Mencari alamat…','info');
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`);
+    const d=await r.json();
+    document.getElementById('geocodeResult').innerHTML=`<div style="font-size:1rem;margin-bottom:14px;color:var(--c);">🏠 ${d.display_name||'Tidak ditemukan'}</div><pre style="background:rgba(0,0,0,0.5);padding:14px;border-radius:10px;font-size:.78rem;overflow-x:auto;">${JSON.stringify(d.address,null,2)}</pre><div style="margin-top:12px;"><a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" class="btn btn-b">🗺️ Buka Maps</a></div>`;
+    document.getElementById('geocodeModal').style.display='flex';
+  }catch{showToast('❌ Gagal geocode','error');}
+}
+
+function appendHistory(){exifFiles.forEach(f=>sessionHistory.push({name:f.name,hasGPS:f.hasGPS,risk:f.privacyRisk,ts:f.timestamp}));sessionHistory=sessionHistory.slice(-50);localStorage.setItem('mrkzHistory',JSON.stringify(sessionHistory));renderHistory();}
+function renderHistory(){
+  const el=document.getElementById('historyList');
+  if(!sessionHistory.length){el.textContent='Belum ada riwayat.';return;}
+  el.innerHTML=sessionHistory.slice(-15).reverse().map(h=>{const[rl,rc]=riskLabel(h.risk);return`<div class="hist-item" style="border-color:${h.risk>=70?'#ff4444':h.risk>=30?'#ffaa00':'#44ff88'}"><div><div style="font-size:.84rem;font-weight:600;">${h.name}</div><div style="font-size:.72rem;opacity:.5;">${new Date(h.ts).toLocaleString('id-ID')}</div></div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:.75rem;color:${h.hasGPS?'var(--c)':'#ff8888'}">${h.hasGPS?'📍':'❌'}</span><span class="ribbon ${rc}" style="font-size:.7rem;">${rl}</span></div></div>`;}).join('');
+}
+
+function fmtSize(b){const u=['B','KB','MB','GB'];let i=0,n=b;while(n>=1024&&i<3){n/=1024;i++;}return`${n.toFixed(1)} ${u[i]}`;}
+</script>
+</body>
+</html>
